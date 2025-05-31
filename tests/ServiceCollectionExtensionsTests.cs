@@ -1,20 +1,22 @@
 global using Xunit;
 global using Microsoft.Extensions.DependencyInjection;
-using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
+using Toolkit.Cryptography.Entities;
+using Toolkit.Cryptography.Extensions;
+using Toolkit.Cryptography.Interfaces;
 
 namespace Toolkit.Cryptography.Tests;
 
 public class ServiceCollectionExtensionsTests
 {
     private readonly IServiceCollection _services = new ServiceCollection()
-        .AddCryptography(Helper.GetConfiguration());
+        .AddSymmetricCipher(Helper.GetConfiguration());
 
     [Fact]
     public void AddToServices_ReturnContains()
     {
-        Assert.Contains(_services, d => d.ServiceType == typeof(ICryptography));
-        Assert.Contains(_services, d => d.ServiceType == typeof(IConfigureOptions<CryptographyOptions>));
+        Assert.Contains(_services, d => d.ServiceType == typeof(ISymmetricCipher));
+        Assert.Contains(_services, d => d.ServiceType == typeof(IConfigureOptions<SymCryptoOpts>));
     }
     
 
@@ -23,7 +25,7 @@ public class ServiceCollectionExtensionsTests
     {
         using var serviceProvider = _services.BuildServiceProvider();
         
-        var options = serviceProvider.GetService<IOptions<CryptographyOptions>>()?.Value;
+        var options = serviceProvider.GetService<IOptions<SymCryptoOpts>>()?.Value;
         Assert.NotNull(options);
         
         Assert.Equal(Helper.InMemorySettings[$"{Helper.Client}:{nameof(options.Passphrase)}"], options.Passphrase);
@@ -39,7 +41,7 @@ public class ServiceCollectionExtensionsTests
     {
         using var serviceProvider = _services.BuildServiceProvider();
         
-        var cryptography = serviceProvider.GetService<ICryptography>();
+        var cryptography = serviceProvider.GetService<ISymmetricCipher>();
         Assert.NotNull(cryptography);
     }
 }

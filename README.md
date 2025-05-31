@@ -1,66 +1,124 @@
-## Toolkit.Cryptography
+# Toolkit.Cryptography
 
-Extension for the framework `System.Security.Cryptography`
+A robust extension for `System.Security.Cryptography` providing simplified symmetric encryption using AES with PBKDF2 key derivation.
 
-#### Sources
-- [Encrypting and Decrypting a String in C#](https://code-maze.com/csharp-string-encryption-decryption/)
+## Features
 
-#### Connecting the configuration
+- **AES Encryption**: 128/192/256-bit symmetric encryption
+- **PBKDF2 Key Derivation**: Secure password-based key generation
+- **Async API**: All operations are asynchronous
+- **Multiple Input Formats**: Support for raw bytes and Base64 strings
+- **Configurable Security**: Customizable iterations, hash algorithms, and key lengths
 
-```c#
-builder.Services.AddCryptography(o =>
+## Installation
+
+```bash
+dotnet add package Snail.Toolkit.Cryptography
+```
+
+## Configuration
+
+### Basic Setup
+
+```csharp
+builder.Services.AddSymmetricCipher(o =>
 {
-    o.Passphrase = "123456";
-    o.IV = "abcede0123456789";
+    o.Passphrase = "YourSecurePassphrase123!"; // Minimum 12 characters
+    o.IV = "Random16ByteValue=="; // Should be cryptographically random
+    o.Iterations = 600_000; // Recommended ≥100,000 for production
+    o.HashMethod = HashAlgo.SHA512;
+    o.DesiredKeyLength = 32; // 256-bit AES
 });
 ```
-or
-```c# 
-builder.Services.AddCryptography(builder.Configuration);
-```
-or
-```c# 
-builder.Services.AddCryptography();
-```
 
-Encrypt data
-```c#
-var encryptToBase64 = await _cryptography.EncryptToBase64Async(string);
-```
+### Configuration from appsettings.json
 
-Decrypt data
-```c#
-var decryptFromBase64 = await _cryptography.DecryptFromBase64Async(string);
-```
-
-#### Sample configuration appsettings.json
-
-```json lines
+```json
 {
   "Cryptography": {
-    "Passphrase" : "0123456789",
-    "IV" : "abcede0123456789",
-    "Salt" : "0123456789abcede",
-    "Iterations" : 1000,
-    "DesiredKeyLength" : 16, // 16 bytes equal 128 bits. Max 256 bits
-    "HashMethod" : "SHA384"
+    "Passphrase": "YourSecurePassphrase123!",
+    "IV": "Random16ByteValue==",
+    "Salt": "Random16ByteSalt==",
+    "Iterations": 600000,
+    "DesiredKeyLength": 32,
+    "HashMethod": "SHA512"
   }
 }
 ```
 
-The name of the algorithm supported by cryptographic hashing `HashMethod`.
-- SHA1
-- SHA256
-- SHA384
-- SHA512
+```csharp
+builder.Services.AddSymmetricCipher(builder.Configuration);
+```
 
-This is an unsupported hashing algorithm.
-- MD5
-- SHA3-256
-- SHA3-384
-- SHA3-512
+### Default Values (Development Only)
+
+```csharp
+builder.Services.AddSymmetricCipher(); // INSECURE for production!
+```
+
+## Usage
+
+### Dependency Injection
+
+```csharp
+public class MyService(ISymmetricCipher crypto)
+{
+    public async Task<string> SecureOperation(string data)
+    {
+        var encrypted = await crypto.EncryptToBase64Async(data);
+        // ... store encrypted data
+        return await crypto.DecryptFromBase64Async(encrypted);
+    }
+}
+```
+
+### Basic Operations
+
+```csharp
+// Encryption
+var ciphertext = await _crypto.EncryptToBase64Async("Sensitive data");
+var rawCiphertext = await _crypto.EncryptAsync("Sensitive data");
+
+// Decryption
+var plaintext = await _crypto.DecryptFromBase64Async(ciphertext);
+var rawPlaintext = await _crypto.DecryptAsync(rawCiphertext);
+```
+
+## Security Recommendations
+
+1. **Passphrase**:
+    - Use 12+ characters with mixed cases, numbers, and symbols
+    - Store in secure secret manager (not in code/config files)
+
+2. **Initialization Vector (IV)**:
+    - Should be 16 random bytes (128 bits)
+    - Never reuse with same key
+    - Store with ciphertext (doesn't need to be secret)
+
+3. **Key Derivation**:
+    - Use ≥100,000 iterations for PBKDF2
+    - Prefer SHA-384 or SHA-512 as hash algorithm
+    - Always use random salt (16+ bytes recommended)
+
+4. **Key Length**:
+    - Use 32 bytes (256-bit) for maximum AES security
+
+## Supported Algorithms
+
+### Hash Algorithms
+- ✅ SHA-256 (minimum recommended)
+- ✅ SHA-384 (balanced security/performance)
+- ✅ SHA-512 (maximum security)
+- ⚠️ SHA-1 (deprecated - legacy support only)
+
+### Unsupported Algorithms
+- ❌ MD5 (cryptographically broken)
+- ❌ SHA-3 variants (future implementation)
+
+## Security Considerations
+
+⚠️ **Important**: The default configuration is INSECURE and should only be used for development/testing. Always provide proper configuration in production environments.
 
 ## License
 
 Toolkit.Cryptography is a free and open source project, released under the permissible [MIT license](LICENSE).
-

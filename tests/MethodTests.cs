@@ -1,9 +1,12 @@
+using Toolkit.Cryptography.Extensions;
+using Toolkit.Cryptography.Interfaces;
+
 namespace Toolkit.Cryptography.Tests;
 
 public class MethodTests
 {
     private readonly IServiceCollection _services = new ServiceCollection()
-        .AddCryptography(Helper.GetConfiguration());
+        .AddSymmetricCipher(Helper.GetConfiguration());
 
     [Fact]
     public async Task EncryptAndDecrypt_ToBase64_ReturnEqual()
@@ -11,7 +14,7 @@ public class MethodTests
         const string text = "Hello world";
         await using var serviceProvider = _services.BuildServiceProvider();
         
-        var cryptography = serviceProvider.GetService<ICryptography>();
+        var cryptography = serviceProvider.GetService<ISymmetricCipher>();
         Assert.NotNull(cryptography);
         
         var encryptToBase64 = await cryptography.EncryptToBase64Async(text);
@@ -26,7 +29,7 @@ public class MethodTests
         const string text = "Hello world";
         await using var serviceProvider = _services.BuildServiceProvider();
         
-        var cryptography = serviceProvider.GetService<ICryptography>();
+        var cryptography = serviceProvider.GetService<ISymmetricCipher>();
         Assert.NotNull(cryptography);
         
         var encrypt = await cryptography.EncryptAsync(text);
