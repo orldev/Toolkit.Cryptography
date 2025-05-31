@@ -77,11 +77,11 @@ public class MyService(ISymmetricCipher crypto)
 ```csharp
 // Encryption
 var ciphertext = await _crypto.EncryptToBase64Async("Sensitive data");
-var rawCiphertext = await _crypto.EncryptAsync("Sensitive data");
+var rawCipher = await _crypto.EncryptAsync(new byte[] { 1, 2, 3, 4, 5 });
 
 // Decryption
 var plaintext = await _crypto.DecryptFromBase64Async(ciphertext);
-var rawPlaintext = await _crypto.DecryptAsync(rawCiphertext);
+var rawBytes = await _crypto.DecryptAsync(rawCipher);
 ```
 
 ## Security Recommendations

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Toolkit.Cryptography.Entities;
@@ -24,7 +25,8 @@ public class SymCryptoOpts
     /// - Numbers and special characters
     /// - No dictionary words
     /// </remarks>
-    public string? Passphrase { get; set; }
+    [AllowNull]
+    public string Passphrase { get; set; }
 
     /// <summary>
     /// Gets or sets the initialization vector (IV) for AES encryption.

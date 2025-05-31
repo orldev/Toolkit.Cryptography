@@ -26,15 +26,15 @@ public class MethodTests
     [Fact]
     public async Task EncryptAndDecrypt_ToBytes_ReturnEqual()
     {
-        const string text = "Hello world";
+        var bytes = new byte[] { 1, 2, 3, 4, 5 };
         await using var serviceProvider = _services.BuildServiceProvider();
         
         var cryptography = serviceProvider.GetService<ISymmetricCipher>();
         Assert.NotNull(cryptography);
         
-        var encrypt = await cryptography.EncryptAsync(text);
+        var encrypt = await cryptography.EncryptAsync(bytes);
         var decrypt = await cryptography.DecryptAsync(encrypt);
         
-        Assert.Equal(text, decrypt);
+        Assert.Equal(bytes, decrypt);
     }
 }

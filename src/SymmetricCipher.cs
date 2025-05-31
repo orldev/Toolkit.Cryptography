@@ -21,20 +21,20 @@ public class SymmetricCipher(IOptions<SymCryptoOpts> options) : ISymmetricCipher
     private readonly SymCryptoOpts _options = options.Value;
 
     /// <summary>
-    /// Encrypts a plaintext string and returns the ciphertext as a byte array.
+    /// Encrypts the specified byte array using AES encryption.
     /// </summary>
-    /// <param name="clearText">The plaintext to encrypt</param>
-    /// <returns>Encrypted ciphertext as byte array</returns>
-    /// <exception cref="ArgumentNullException">Thrown when clearText is null</exception>
+    /// <param name="plainText">The plaintext data to encrypt</param>
+    /// <returns>The encrypted ciphertext as byte array</returns>
+    /// <exception cref="ArgumentNullException">Thrown when input bytes are null</exception>
     /// <exception cref="CryptographicException">Thrown when encryption fails</exception>
     /// <remarks>
-    /// Security considerations:
-    /// - Uses Unicode encoding for text conversion
-    /// - Generates a new IV for each operation if not specified in options
-    /// - Combines IV and ciphertext in output
-    /// - Always dispose cryptographic objects with 'using' statements
+    /// Encryption process:
+    /// 1. Derives key from configured passphrase using PBKDF2
+    /// 2. Uses configured initialization vector (IV)
+    /// 3. Output includes both IV and ciphertext (unless configured otherwise)
+    /// SECURITY NOTE: Using a static IV reduces security - consider random IVs for production
     /// </remarks>
-    public async Task<byte[]> EncryptAsync(string clearText)
+    public async Task<byte[]> EncryptAsync(byte[] plainText)
     {
         using var aes = Aes.Create();
         aes.Key = DeriveKeyFromPassword(_options.Passphrase);
@@ -42,26 +42,27 @@ public class SymmetricCipher(IOptions<SymCryptoOpts> options) : ISymmetricCipher
         
         await using MemoryStream output = new();
         await using CryptoStream cryptoStream = new(output, aes.CreateEncryptor(), CryptoStreamMode.Write);
-        await cryptoStream.WriteAsync(Encoding.Unicode.GetBytes(clearText));
+        await cryptoStream.WriteAsync(plainText);
         await cryptoStream.FlushFinalBlockAsync();
         
         return output.ToArray();
     }
     
     /// <summary>
-    /// Decrypts ciphertext and returns the original plaintext string.
+    /// Decrypts the specified encrypted byte array using AES decryption.
     /// </summary>
-    /// <param name="encrypted">The ciphertext to decrypt</param>
-    /// <returns>Decrypted plaintext string</returns>
-    /// <exception cref="ArgumentNullException">Thrown when encrypted is null</exception>
-    /// <exception cref="CryptographicException">Thrown when decryption fails</exception>
+    /// <param name="encrypted">The ciphertext data to decrypt</param>
+    /// <returns>The decrypted plaintext as byte array</returns>
+    /// <exception cref="ArgumentNullException">Thrown when input is null</exception>
+    /// <exception cref="CryptographicException">Thrown when decryption fails (invalid key, corrupted data, etc.)</exception>
     /// <remarks>
-    /// Implementation notes:
-    /// - Expects input in the format produced by EncryptAsync
-    /// - Uses same key derivation parameters as encryption
-    /// - Handles both memory and crypto streams asynchronously
+    /// Decryption process:
+    /// 1. Derives key from configured passphrase using PBKDF2
+    /// 2. Uses configured initialization vector (IV)
+    /// 3. Returns original plaintext bytes
+    /// SECURITY NOTE: Ensure the same IV used for encryption is provided
     /// </remarks>
-    public async Task<string> DecryptAsync(byte[] encrypted)
+    public async Task<byte[]> DecryptAsync(byte[] encrypted)
     {
         using var aes = Aes.Create();
         aes.Key = DeriveKeyFromPassword(_options.Passphrase);
@@ -72,33 +73,51 @@ public class SymmetricCipher(IOptions<SymCryptoOpts> options) : ISymmetricCipher
         await using MemoryStream output = new();
         await cryptoStream.CopyToAsync(output);
         
-        return Encoding.Unicode.GetString(output.ToArray());
+        return output.ToArray();
     }
 
     /// <summary>
-    /// Encrypts a plaintext string and returns Base64-encoded ciphertext.
+    /// Encrypts a string and returns the result as a Base64-encoded string.
     /// </summary>
-    /// <param name="clearText">The plaintext to encrypt</param>
-    /// <returns>Base64-encoded ciphertext string</returns>
+    /// <param name="clearText">The plaintext string to encrypt</param>
+    /// <returns>Base64-encoded ciphertext</returns>
+    /// <exception cref="ArgumentNullException">Thrown when input is null</exception>
+    /// <exception cref="CryptographicException">Thrown when encryption fails</exception>
     /// <remarks>
-    /// Convenience method that combines encryption and Base64 encoding.
-    /// Suitable for text-based storage or transmission.
+    /// This method:
+    /// 1. Converts string to bytes using Unicode encoding
+    /// 2. Encrypts using <see cref="EncryptAsync"/>
+    /// 3. Returns result as Base64 string
+    /// Suitable for text-based storage/transmission
     /// </remarks>
-    public async Task<string> EncryptToBase64Async(string clearText) =>
-        Convert.ToBase64String(await EncryptAsync(clearText));
-    
+    public async Task<string> EncryptToBase64Async(string clearText)
+    {
+        var bytes = Encoding.Unicode.GetBytes(clearText);
+        var encrypt = await EncryptAsync(bytes);
+        return Convert.ToBase64String(encrypt);
+    }
+
     /// <summary>
-    /// Decrypts Base64-encoded ciphertext and returns the original plaintext.
+    /// Decrypts a Base64-encoded ciphertext string back to its original plaintext.
     /// </summary>
     /// <param name="encrypted">Base64-encoded ciphertext</param>
-    /// <returns>Decrypted plaintext string</returns>
+    /// <returns>The decrypted plaintext string</returns>
+    /// <exception cref="ArgumentNullException">Thrown when input is null</exception>
     /// <exception cref="FormatException">Thrown when input is not valid Base64</exception>
+    /// <exception cref="CryptographicException">Thrown when decryption fails</exception>
     /// <remarks>
-    /// Counterpart to EncryptToBase64Async, handles the common case of
-    /// Base64-encoded ciphertext from text-based storage.
+    /// This method:
+    /// 1. Converts Base64 string to bytes
+    /// 2. Decrypts using <see cref="DecryptAsync"/>
+    /// 3. Returns result as Unicode string
+    /// Counterpart to <see cref="EncryptToBase64Async"/>
     /// </remarks>
-    public async Task<string> DecryptFromBase64Async(string encrypted) => 
-        await DecryptAsync(Convert.FromBase64String(encrypted));
+    public async Task<string> DecryptFromBase64Async(string encrypted)
+    {
+        var bytes = Convert.FromBase64String(encrypted);
+        var decrypt = await DecryptAsync(bytes);
+        return Encoding.Unicode.GetString(decrypt);
+    }
 
     /// <summary>
     /// Derives a cryptographic key from a password using PBKDF2.
@@ -137,6 +156,7 @@ public class SymmetricCipher(IOptions<SymCryptoOpts> options) : ISymmetricCipher
     /// - Default IV is hardcoded and INSECURE for production use
     /// - IV should be random and unique for each encryption
     /// - In production, always specify a proper IV in options
+    /// - Consider generating a new random IV for each encryption operation
     /// </remarks>
     private static byte[] InitializationVector(string? iv)
     {

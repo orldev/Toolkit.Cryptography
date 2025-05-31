@@ -11,23 +11,20 @@ namespace Toolkit.Cryptography.Interfaces;
 public interface ISymmetricCipher
 {
     /// <summary>
-    /// Encrypts the specified plaintext string and returns the ciphertext as a byte array.
+    /// Encrypts the specified byte array and returns the ciphertext as a byte array.
     /// </summary>
-    /// <param name="clearText">The plaintext string to encrypt.</param>
+    /// <param name="plainText">The plaintext byte array to encrypt.</param>
     /// <returns>
     /// A task that represents the asynchronous operation. The task result contains
     /// the encrypted ciphertext as a byte array.
     /// </returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="clearText"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="plainText"/> is null.</exception>
     /// <exception cref="CryptographicException">Thrown when encryption fails.</exception>
     /// <remarks>
-    /// The encryption process typically includes:
-    /// 1. UTF-8 encoding of the input string
-    /// 2. Generation of a cryptographically random IV (if not specified in options)
-    /// 3. Encryption using AES with the configured parameters
-    /// 4. Returns the IV + ciphertext combined in the byte array
+    /// This method is suitable for binary data encryption. The output includes both
+    /// the IV and ciphertext in a single byte array.
     /// </remarks>
-    Task<byte[]> EncryptAsync(string clearText);
+    Task<byte[]> EncryptAsync(byte[] plainText);
 
     /// <summary>
     /// Encrypts the specified plaintext string and returns the ciphertext as a Base64-encoded string.
@@ -47,21 +44,21 @@ public interface ISymmetricCipher
     Task<string> EncryptToBase64Async(string clearText);
 
     /// <summary>
-    /// Decrypts the specified ciphertext byte array and returns the original plaintext.
+    /// Decrypts the specified encrypted byte array and returns the original plaintext as a byte array.
     /// </summary>
-    /// <param name="encrypted">The ciphertext byte array to decrypt.</param>
+    /// <param name="encrypted">The encrypted byte array to decrypt.</param>
     /// <returns>
     /// A task that represents the asynchronous operation. The task result contains
-    /// the decrypted plaintext string.
+    /// the decrypted plaintext as a byte array.
     /// </returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="encrypted"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="encrypted"/> is empty or malformed.</exception>
     /// <exception cref="CryptographicException">Thrown when decryption fails (invalid key, corrupted data, etc.).</exception>
     /// <remarks>
-    /// The input byte array is expected to contain both the IV and ciphertext
-    /// in the same format produced by <see cref="EncryptAsync"/>.
+    /// This method is the counterpart to <see cref="EncryptAsync"/>, handling binary ciphertext
+    /// that was produced by the encryption method.
     /// </remarks>
-    Task<string> DecryptAsync(byte[] encrypted);
+    Task<byte[]> DecryptAsync(byte[] encrypted);
 
     /// <summary>
     /// Decrypts the specified Base64-encoded ciphertext and returns the original plaintext.
